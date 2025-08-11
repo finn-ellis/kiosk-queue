@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode, useCallback } from 'react';
 import { User, QueueState } from '../api/api';
 import { socket } from '../api/socket';
 
@@ -16,6 +16,7 @@ export const QueueProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     useEffect(() => {
         const handleQueueUpdate = (data: QueueState) => {
+            console.log(data);
             setQueue(data.queue);
             setWaitTime(data.wait_time);
         };
@@ -34,9 +35,9 @@ export const QueueProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         };
     }, []);
 
-    const connectAdmin = (password: string) => {
+    const connectAdmin = useCallback((password: string) => {
         socket.emit('admin_connect', { password });
-    };
+    }, []);
 
     return (
         <QueueContext.Provider value={{ queue, waitTime, connectAdmin }}>

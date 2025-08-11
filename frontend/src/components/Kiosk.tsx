@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import JoinQueueView from '../views/JoinQueueView';
 import ConfirmationView from '../views/ConfirmationView';
-import AdminView from '../views/AdminView';
 import { useParams } from 'react-router-dom';
 import { useQueue } from '../context/QueueContext';
 
 const Kiosk: React.FC = () => {
     const { lineNumber } = useParams<{ lineNumber?: string }>();
     const { queue, waitTime: globalWaitTime } = useQueue();
-    const [view, setView] = useState('default'); // default, confirmation, admin
+    const [view, setView] = useState('default'); // default, confirmation
     const [userData, setUserData] = useState<{ place_in_queue: number, wait_time: number } | null>(null);
-    const [adminPassword, setAdminPassword] = useState('');
     const [localWaitTime, setLocalWaitTime] = useState(0);
     const [localQueue, setLocalQueue] = useState(queue);
 
@@ -32,25 +30,10 @@ const Kiosk: React.FC = () => {
         setView('confirmation');
     };
 
-
-    const handleAdminLogin = () => {
-        const password = prompt("Enter admin password");
-        if (password) {
-            setAdminPassword(password);
-            setView('admin');
-        }
-    };
-
-    const handleAuthFailure = () => {
-        setView('default');
-    };
-
     const renderView = () => {
         switch (view) {
             case 'confirmation':
                 return userData && <ConfirmationView placeInQueue={userData.place_in_queue} waitTime={userData.wait_time} />;
-            case 'admin':
-                return <AdminView password={adminPassword} onAuthFailure={handleAuthFailure} />;
             default:
                 return (
                     <div>
@@ -58,7 +41,6 @@ const Kiosk: React.FC = () => {
                         <p>Current Wait Time: {localWaitTime} minutes</p>
                         <p>Queue Size: {localQueue.length}</p>
                         <JoinQueueView onJoinSuccess={handleJoinSuccess} lineNumber={lineNumber ? parseInt(lineNumber, 10) : undefined} />
-                        <button style={{ position: 'absolute', bottom: '10px', right: '10px' }} onClick={handleAdminLogin}>Admin</button>
                     </div>
                 );
         }

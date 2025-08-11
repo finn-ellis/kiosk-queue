@@ -3,32 +3,41 @@ import { removeFromQueue, getNext, checkAdminPassword } from '../api/api';
 import { User } from '../api/api';
 import { useQueue } from '../context/QueueContext';
 
-interface AdminViewProps {
-    password: string;
-    onAuthFailure: () => void;
-}
-
-const AdminView: React.FC<AdminViewProps> = ({ password, onAuthFailure }) => {
+const AdminView: React.FC = () => {
     const { queue: adminQueue, connectAdmin } = useQueue();
     const [error, setError] = useState<string | null>(null);
+    const [password, setPassword] = useState<string | null>(null);
 
     useEffect(() => {
-        connectAdmin(password);
+        if (!password) {
+            const timer = setTimeout(() => {
+                const pass = prompt("Enter admin password");
+                if (pass) {
+                    setPassword(pass);
+                } else {
+                    setError("Password is required to view this page.");
+                }
+            }, 500); // 500ms delay
 
-        const checkPassword = async () => {
-            try {
-                await checkAdminPassword(password);
-                setError(null);
-            } catch (error) {
-                console.error(error);
-                setError('Failed to fetch queue. Incorrect password?');
-                onAuthFailure();
-            }
-        };
-        checkPassword();
-    }, [password, onAuthFailure, connectAdmin]);
+            return () => clearTimeout(timer);
+        } else {
+            connectAdmin(password);
+
+            const checkPassword = async () => {
+                try {
+                    await checkAdminPassword(password);
+                    setError(null);
+                } catch (error) {
+                    console.error(error);
+                    setError('Failed to fetch queue. Incorrect password?');
+                }
+            };
+            checkPassword();
+        }
+    }, [password, connectAdmin]);
 
     const handleRemove = async (userId: number) => {
+        if (!password) return;
         try {
             await removeFromQueue(password, userId);
         } catch (error) {
@@ -38,6 +47,7 @@ const AdminView: React.FC<AdminViewProps> = ({ password, onAuthFailure }) => {
     };
 
     const handleNext = async (lineNumber: number) => {
+        if (!password) return;
         try {
             await getNext(password, lineNumber);
         } catch (error) {
