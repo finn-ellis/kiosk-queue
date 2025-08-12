@@ -1,5 +1,5 @@
 .venv
-backend/__pycache__
+__pycache__
 frontend/node_modules
 */instance
 frontend/package-lock.json

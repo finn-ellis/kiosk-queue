@@ -1,0 +1,18 @@
+[project]
+name = "kiosk-queue"
+version = "0.1.0"
+description = "Reusable Flask queue kiosk module"
+authors = [{name="Your Name"}]
+dependencies = [
+  "Flask>=2.0",
+  "Flask-SQLAlchemy>=2.5",
+  "flask-socketio>=5.0",
+  "Flask-Cors>=4.0",
+  "python-dotenv",
+  "twilio"
+]
+readme = "README.md"
+license = {text = "MIT"}
+
+[project.urls]
+Homepage = "https://github.com/yourorg/kiosk-queue"

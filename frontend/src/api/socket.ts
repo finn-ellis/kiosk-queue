@@ -1,3 +1,14 @@
-import io from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 
-export const socket = io('http://localhost:5000');
+// Connect specifically to the queue namespace so server-side isolation works
+export const socket: Socket = io('http://localhost:5000/queue');
+
+// Helper to request admin elevation
+export function connectAsAdmin(password: string) {
+	socket.emit('admin_connect', { password });
+}
+
+// Helper to downgrade back to public room
+export function leaveAdmin() {
+	socket.emit('admin_leave');
+}

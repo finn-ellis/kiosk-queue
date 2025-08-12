@@ -1,8 +1,7 @@
 from flask import current_app
 from .models import User, Queue
-from .database import db
+from .db import db
 from .utils import send_sms
-from .sockets import socketio
 
 def get_public_queue():
     users = User.query.order_by(User.line_number, User.place_in_queue).all()
@@ -30,14 +29,18 @@ def get_admin_queue_data():
     return [{'id': user.id, 'name': user.name, 'phone_number': user.phone_number, 'party_size': user.party_size, 'place_in_queue': user.place_in_queue, 'line_number': user.line_number} for user in users]
 
 def broadcast_queue_update():
+    socketio = current_app.extensions.get('socketio')
+    if not socketio:
+        return
     queue = Queue.query.first()
     wait_time = queue.wait_time if queue else 0
-    
+
+    # Broadcast separately to admin and public rooms inside /queue namespace
     admin_user_list = get_admin_queue_data()
-    socketio.emit('queue_update', {'queue': admin_user_list, 'wait_time': wait_time}, to='admin')
+    socketio.emit('queue_update', {'queue': admin_user_list, 'wait_time': wait_time}, to='admin', namespace='/queue')
 
     public_user_list = get_public_queue()
-    socketio.emit('queue_update', {'queue': public_user_list, 'wait_time': wait_time}, to='public')
+    socketio.emit('queue_update', {'queue': public_user_list, 'wait_time': wait_time}, to='public', namespace='/queue')
 
 def find_best_fit(party_size):
     line_count = current_app.config['LINE_COUNT']
