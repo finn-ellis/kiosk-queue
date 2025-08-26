@@ -6,6 +6,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     LINE_COUNT = int(os.environ.get('LINE_COUNT', 2))
     SLOT_TIME = int(os.environ.get('SLOT_TIME', 5)) # in minutes
+    RESET_TIME = int(os.environ.get('RESET_TIME', 3)) # in minutes
     ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or 'admin'
     TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
     TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
