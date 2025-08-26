@@ -1,10 +1,10 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode, useCallback } from 'react';
-import { User, QueueState } from '../api/api';
+import { User, QueueState, WaitDetail } from '../api/api';
 import { socket } from '../api/socket';
 
 interface QueueContextType {
     queue: User[];
-    waitTime: number;
+    waitDetail: WaitDetail | undefined;
     connectAdmin: (password: string) => void;
 }
 
@@ -12,13 +12,13 @@ const QueueContext = createContext<QueueContextType | undefined>(undefined);
 
 export const QueueProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [queue, setQueue] = useState<User[]>([]);
-    const [waitTime, setWaitTime] = useState(0);
+    const [waitDetail, setWaitDetail] = useState<WaitDetail | undefined>(undefined);
 
     useEffect(() => {
         const handleQueueUpdate = (data: QueueState) => {
             console.log(data);
             setQueue(data.queue);
-            setWaitTime(data.wait_time);
+            setWaitDetail(data.wait_detail);
         };
 
         socket.on('queue_update', handleQueueUpdate);
@@ -40,7 +40,7 @@ export const QueueProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }, []);
 
     return (
-        <QueueContext.Provider value={{ queue, waitTime, connectAdmin }}>
+    <QueueContext.Provider value={{ queue, waitDetail, connectAdmin }}>
             {children}
         </QueueContext.Provider>
     );

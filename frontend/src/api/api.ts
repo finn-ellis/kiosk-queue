@@ -9,9 +9,15 @@ export interface User {
     line_number?: number;
 }
 
+export interface WaitDetail {
+    per_line_single: number[]; // minutes wait to join each individual line as size 1
+    per_span: Record<number, number>; // span_size -> minutes wait
+}
+
 export interface QueueState {
     queue: User[];
-    wait_time: number;
+    wait_time: number; // legacy aggregate
+    wait_detail?: WaitDetail;
 }
 
 export const getQueue = async (): Promise<QueueState> => {

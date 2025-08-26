@@ -1,5 +1,6 @@
 from flask import current_app
-from .models import User, Queue
+from .models import User, Queue, LineStatus
+import time
 from .db import db
 from .utils import send_sms
 
@@ -28,19 +29,102 @@ def get_admin_queue_data():
     users = User.query.order_by(User.line_number, User.place_in_queue).all()
     return [{'id': user.id, 'name': user.name, 'phone_number': user.phone_number, 'party_size': user.party_size, 'place_in_queue': user.place_in_queue, 'line_number': user.line_number} for user in users]
 
+def _ensure_line_status():
+    line_count = current_app.config['LINE_COUNT']
+    existing = {ls.line_number: ls for ls in LineStatus.query.all()}
+    changed = False
+    for i in range(line_count):
+        if i not in existing:
+            db.session.add(LineStatus(line_number=i, last_admitted_time=int(time.time())))  # type: ignore[arg-type]
+            changed = True
+    if changed:
+        db.session.commit()
+
+def _compute_wait_times():
+    """Compute dynamic wait estimates:
+    Returns dict with:
+      per_line_single: wait time (minutes) if a size-1 party joined each line now
+      per_span: mapping span_size -> estimated wait (minutes) for a new party spanning that many lines placed at optimal start.
+    Formula per line slot depth k: last_admitted_time[line] + k*(SLOT_TIME+RESET_TIME).
+    For spanning size S we find minimal max over S contiguous lines at their next slot depth.
+    """
+    _ensure_line_status()
+    slot_time = current_app.config['SLOT_TIME']
+    reset_time = current_app.config['RESET_TIME']
+    line_count = current_app.config['LINE_COUNT']
+    span_total = slot_time + reset_time
+    # Build occupancy sets of depths per line to capture holes (e.g., depth 1 free while depth 2 occupied by spanning party)
+    occupancy = [set() for _ in range(line_count)]
+    for u in User.query.order_by(User.place_in_queue).all():
+        if u.line_number is None:
+            continue
+        for ln in range(u.line_number, min(line_count, u.line_number + u.party_size)):
+            occupancy[ln].add(u.place_in_queue)
+    statuses = {ls.line_number: ls for ls in LineStatus.query.all()}
+    now = int(time.time())
+    def earliest_free_depth(line):
+        depth = 1
+        occ = occupancy[line]
+        while depth in occ:
+            depth += 1
+        return depth
+
+    per_line_single = []
+    for ln in range(line_count):
+        ls = statuses.get(ln)
+        last_time = ls.last_admitted_time if ls else now
+        depth = earliest_free_depth(ln)
+        wait_seconds = last_time + depth * span_total * 60 - now
+        per_line_single.append(max(0, wait_seconds // 60))
+    per_span = {}
+    for span in range(2, line_count+1):
+        best_projected = None
+        for start in range(0, line_count - span + 1):
+            # Find earliest depth simultaneously free across span contiguous lines
+            depth = 1
+            # Upper bound for search: current max depth observed + span (avoid infinite loop); derive rough cap
+            depth_cap = 1
+            for ln in range(start, start+span):
+                if occupancy[ln]:
+                    depth_cap = max(depth_cap, max(occupancy[ln]) + span + 5)
+            while True:
+                if all(depth not in occupancy[ln] for ln in range(start, start+span)):
+                    break
+                depth += 1
+                if depth > depth_cap:  # safety guard
+                    break
+            # If depth exceeded cap, skip this start
+            if depth > depth_cap:
+                continue
+            # Compute projected readiness as max across involved lines at that depth
+            line_times = []
+            for ln in range(start, start+span):
+                lt = statuses[ln].last_admitted_time if ln in statuses else now
+                line_times.append(lt + depth * span_total * 60)
+            projected = max(line_times)
+            if best_projected is None or projected < best_projected:
+                best_projected = projected
+        if best_projected is not None:
+            per_span[span] = max(0, (best_projected - now)//60)
+    return {
+        'per_line_single': per_line_single,
+        'per_span': per_span
+    }
+
 def broadcast_queue_update():
     socketio = current_app.extensions.get('socketio')
     if not socketio:
         return
     queue = Queue.query.first()
     wait_time = queue.wait_time if queue else 0
+    wait_detail = _compute_wait_times()
 
     # Broadcast separately to admin and public rooms inside /queue namespace
     admin_user_list = get_admin_queue_data()
-    socketio.emit('queue_update', {'queue': admin_user_list, 'wait_time': wait_time}, to='admin', namespace='/queue')
+    socketio.emit('queue_update', {'queue': admin_user_list, 'wait_time': wait_time, 'wait_detail': wait_detail}, to='admin', namespace='/queue')
 
     public_user_list = get_public_queue()
-    socketio.emit('queue_update', {'queue': public_user_list, 'wait_time': wait_time}, to='public', namespace='/queue')
+    socketio.emit('queue_update', {'queue': public_user_list, 'wait_time': wait_time, 'wait_detail': wait_detail}, to='public', namespace='/queue')
 
 def _build_occupancy():
     """Return a list of sets. occupancy[line] = set of depth rows occupied in that line.
@@ -167,7 +251,7 @@ def join_queue_logic(name, phone_number, party_size, line_number_req):
     # SQLAlchemy model accepts kwargs; type: ignore for static checker
     new_user = User(name=name, phone_number=phone_number, party_size=party_size, line_number=line_number, place_in_queue=depth)  # type: ignore[arg-type]
     db.session.add(new_user)
-    queue.update_wait_time()
+    # queue.update_wait_time()
     db.session.commit()
 
     broadcast_queue_update()
@@ -198,9 +282,16 @@ def next_in_queue_logic(line_number):
             send_sms(target.phone_number, 'You are next in the queue!')
         db.session.delete(target)
         _compact_queue(removed_depth)
+        # Update last admitted time for each line spanned
+        _ensure_line_status()
+        statuses = {ls.line_number: ls for ls in LineStatus.query.all()}
+        now = int(time.time())
+        for ln in range(target.line_number, target.line_number + target.party_size):
+            if ln in statuses:
+                statuses[ln].last_admitted_time = now
         queue = Queue.query.first()
-        if queue:
-            queue.update_wait_time()
+        # if queue:
+        #     queue.update_wait_time()
         db.session.commit()
         broadcast_queue_update()
 
@@ -211,10 +302,19 @@ def remove_from_queue_logic(user_id):
     if user:
         removed_depth = user.place_in_queue
         db.session.delete(user)
+        # Compact queue first to close gaps created by removal
         _compact_queue(removed_depth)
+        # Only update last_admitted_time if the removed user was actually the next to be served (depth 1)
+        if removed_depth == 1:
+            _ensure_line_status()
+            statuses = {ls.line_number: ls for ls in LineStatus.query.all()}
+            now = int(time.time())
+            for ln in range(user.line_number, user.line_number + user.party_size):
+                if ln in statuses:
+                    statuses[ln].last_admitted_time = now
         queue = Queue.query.first()
-        if queue:
-            queue.update_wait_time()
+        # if queue:
+        #     queue.update_wait_time()
         db.session.commit()
         broadcast_queue_update()
     return {'message': 'User removed'}
