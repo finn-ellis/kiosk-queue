@@ -35,6 +35,7 @@ class KioskQueue:
         CORS(app, resources=cors_resources, supports_credentials=app.config.get("KIOSK_QUEUE_CORS_SUPPORTS_CREDENTIALS", False))
 
         db.init_app(app)
+        db.create_all()
 
         bp = create_blueprint()
         app.register_blueprint(bp, url_prefix=url_prefix or self.url_prefix)
