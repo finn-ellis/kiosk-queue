@@ -3,9 +3,10 @@ from .routes import create_blueprint
 from .cli import init_db_command, reset_db_command
 from .sockets import create_socket_namespace
 from flask_cors import CORS
+from cors_helpers import configure_cors  # absolute import
 
 class KioskQueue:
-    def __init__(self, app=None, *, url_prefix="/api/queue", register_cli=True):
+    def __init__(self, app=None, *, url_prefix="/api/kiosk", register_cli=True):
         self.url_prefix = url_prefix
         self._namespace = None
         if app:
@@ -20,22 +21,17 @@ class KioskQueue:
         app.config.setdefault("KIOSK_QUEUE_CORS_SUPPORTS_CREDENTIALS", False)
 
         # Derive CORS origins list
-        origins_raw = app.config.get("KIOSK_QUEUE_CORS_ORIGINS", "*")
-        if isinstance(origins_raw, str):
-            origins_list = [o.strip() for o in origins_raw.split(",") if o.strip()]
-        else:
-            origins_list = origins_raw or ["*"]
-
-        # Apply CORS only to this extension's HTTP endpoints + Socket.IO path
         effective_prefix = url_prefix or self.url_prefix
-        cors_resources = {
-            f"{effective_prefix}/*": {"origins": origins_list},
-            "/socket.io/*": {"origins": origins_list},  # Socket.IO engine.io endpoint
-        }
-        CORS(app, resources=cors_resources, supports_credentials=app.config.get("KIOSK_QUEUE_CORS_SUPPORTS_CREDENTIALS", False))
+        origins_list = configure_cors(
+            app,
+            url_prefix=effective_prefix,
+            origins_config_key="KIOSK_QUEUE_CORS_ORIGINS",
+            creds_config_key="KIOSK_QUEUE_CORS_SUPPORTS_CREDENTIALS",
+        )
 
-        db.init_app(app)
-        db.create_all()
+        with app.app_context():
+            db.init_app(app)
+            db.create_all()
 
         bp = create_blueprint()
         app.register_blueprint(bp, url_prefix=url_prefix or self.url_prefix)

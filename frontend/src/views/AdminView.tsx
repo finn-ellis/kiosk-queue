@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { removeFromQueue, getNext, checkAdminPassword } from '../api/api';
 import { User } from '../api/api';
 import { useQueue } from '../context/QueueContext';
+// import './AdminView.css';
 
 const AdminView: React.FC = () => {
     // Pull waitDetail so we can know TOTAL configured lines, not just those currently occupied
@@ -79,7 +80,7 @@ const AdminView: React.FC = () => {
                 depthOneStarters[u.line_number ?? 0] = u;
             }
         }
-        const buttons: JSX.Element[] = [];
+        const buttons: React.JSX.Element[] = [];
     for (let line = 0; line < displayLineCount; line++) {
             const starter = depthOneStarters[line];
             if (starter && starter.party_size > 1) {
@@ -121,16 +122,16 @@ const AdminView: React.FC = () => {
     const tableRows = useMemo(() => {
         // Gather users grouped by depth (place_in_queue)
         const users = adminQueue.slice().sort((a, b) => a.place_in_queue - b.place_in_queue || (a.line_number ?? 0) - (b.line_number ?? 0));
-        if (!users.length) return [] as JSX.Element[];
+        if (!users.length) return [] as React.JSX.Element[];
         const maxDepth = users[users.length - 1].place_in_queue;
         // Map for quick lookup by (depth, startLine)
         const depthLineMap = new Map<string, User>();
         users.forEach(u => {
             depthLineMap.set(`${u.place_in_queue}:${u.line_number ?? 0}`, u);
         });
-        const rows: JSX.Element[] = [];
+        const rows: React.JSX.Element[] = [];
         for (let depth = 1; depth <= maxDepth; depth++) {
-            const cells: JSX.Element[] = [];
+            const cells: React.JSX.Element[] = [];
             let col = 0;
             while (col < displayLineCount) {
                 // Check if a user starts at this column with this depth

@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:5000/api/kiosk';
+import API_URL from './config';
+const QUEUE_API_URL = API_URL + "/api/kiosk"
 
 export interface User {
     id: number;
@@ -21,7 +22,7 @@ export interface QueueState {
 }
 
 export const getQueue = async (): Promise<QueueState> => {
-    const response = await fetch(`${API_URL}/queue`);
+    const response = await fetch(`${QUEUE_API_URL}/queue`);
     if (!response.ok) {
         throw new Error('Failed to fetch queue');
     }
@@ -29,7 +30,7 @@ export const getQueue = async (): Promise<QueueState> => {
 };
 
 export const joinQueue = async (name: string, phoneNumber: string, partySize: number, lineNumber?: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/join`, {
+    const response = await fetch(`${QUEUE_API_URL}/join`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -43,7 +44,7 @@ export const joinQueue = async (name: string, phoneNumber: string, partySize: nu
 };
 
 export const checkAdminPassword = async (password: string): Promise<any> => {
-    const response = await fetch(`${API_URL}/admin/check_password`, {
+    const response = await fetch(`${QUEUE_API_URL}/admin/check_password`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -57,7 +58,7 @@ export const checkAdminPassword = async (password: string): Promise<any> => {
 };
 
 export const getNext = async (password: string, lineNumber: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/admin/next`, {
+    const response = await fetch(`${QUEUE_API_URL}/admin/next`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -71,7 +72,7 @@ export const getNext = async (password: string, lineNumber: number): Promise<any
 };
 
 export const removeFromQueue = async (password: string, userId: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/admin/remove`, {
+    const response = await fetch(`${QUEUE_API_URL}/admin/remove`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -85,7 +86,7 @@ export const removeFromQueue = async (password: string, userId: number): Promise
 };
 
 export const getAdminQueue = async (password: string): Promise<QueueState> => {
-    const response = await fetch(`${API_URL}/admin/queue`, {
+    const response = await fetch(`${QUEUE_API_URL}/admin/queue`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

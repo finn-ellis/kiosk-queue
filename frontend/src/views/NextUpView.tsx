@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
-import { User } from '../api/api';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useQueue } from '../context/QueueContext';
+import { User } from '../api/api';
+// import './NextUpView.css';
+import { useParams } from 'react-router-dom';
 
 const NextUpView: React.FC = () => {
     const { lineNumber } = useParams<{ lineNumber?: string }>();
@@ -68,7 +69,7 @@ const NextUpView: React.FC = () => {
                     }}
                 >
                     {(() => {
-                        const elements: JSX.Element[] = [];
+                        const elements: React.JSX.Element[] = [];
                         const frontMap: Record<number, User> = {};
                         for (const p of frontParties) {
                             frontMap[p.line_number ?? 0] = p;
