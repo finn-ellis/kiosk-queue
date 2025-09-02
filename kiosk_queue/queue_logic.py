@@ -2,7 +2,6 @@ from flask import current_app
 from .models import User, Queue, LineStatus
 import time
 from .db import db
-from .utils import send_sms
 
 def get_public_queue():
     users = User.query.order_by(User.line_number, User.place_in_queue).all()
@@ -18,16 +17,17 @@ def get_public_queue():
             'id': user.id,
             'party_size': user.party_size,
             'place_in_queue': user.place_in_queue,
-            'line_number': user.line_number
+            'line_number': user.line_number,
+            'name': user.name
         }
-        if user.id in first_in_line_ids:
-            entry['name'] = user.name
+        # if user.id in first_in_line_ids:
+        #     entry['name'] = user.name
         user_list.append(entry)
     return user_list
 
 def get_admin_queue_data():
     users = User.query.order_by(User.line_number, User.place_in_queue).all()
-    return [{'id': user.id, 'name': user.name, 'phone_number': user.phone_number, 'party_size': user.party_size, 'place_in_queue': user.place_in_queue, 'line_number': user.line_number} for user in users]
+    return [{'id': user.id, 'name': user.name, 'email': user.email, 'party_size': user.party_size, 'place_in_queue': user.place_in_queue, 'line_number': user.line_number} for user in users]
 
 def _ensure_line_status():
     line_count = current_app.config['LINE_COUNT']
@@ -234,7 +234,7 @@ def _compact_queue(start_depth: int):
             break
     db.session.flush()
 
-def join_queue_logic(name, phone_number, party_size, line_number_req):
+def join_queue_logic(name, email, party_size, line_number_req):
     if not name:
         return {'error': 'Name is required'}, 400
 
@@ -249,16 +249,12 @@ def join_queue_logic(name, phone_number, party_size, line_number_req):
         db.session.commit()
 
     # SQLAlchemy model accepts kwargs; type: ignore for static checker
-    new_user = User(name=name, phone_number=phone_number, party_size=party_size, line_number=line_number, place_in_queue=depth)  # type: ignore[arg-type]
+    new_user = User(name=name, email=email, party_size=party_size, line_number=line_number, place_in_queue=depth)  # type: ignore[arg-type]
     db.session.add(new_user)
     # queue.update_wait_time()
     db.session.commit()
 
     broadcast_queue_update()
-
-    if phone_number:
-        span_info = f' spanning {party_size} lines' if party_size > 1 else ''
-        send_sms(phone_number, f'You are in the queue{span_info}! Depth {depth}, starting line {line_number + 1}. Estimated wait time is {queue.wait_time} minutes.')
 
     return {'message': 'Successfully joined queue', 'place_in_queue': depth, 'line_number': line_number, 'wait_time': queue.wait_time}, 201
 
@@ -278,8 +274,6 @@ def next_in_queue_logic(line_number):
 
     if target:
         removed_depth = target.place_in_queue
-        if target.phone_number:
-            send_sms(target.phone_number, 'You are next in the queue!')
         db.session.delete(target)
         _compact_queue(removed_depth)
         # Update last admitted time for each line spanned
@@ -318,10 +312,3 @@ def remove_from_queue_logic(user_id):
         db.session.commit()
         broadcast_queue_update()
     return {'message': 'User removed'}
-
-def cancel_by_sms_logic(phone_number):
-    user = User.query.filter_by(phone_number=phone_number).first()
-    if user:
-        remove_from_queue_logic(user.id)
-        return True
-    return False

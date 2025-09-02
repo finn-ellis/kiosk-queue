@@ -1,14 +1,12 @@
 from flask import Blueprint, request, jsonify, current_app
 from .models import User, Queue
 from .db import db
-from twilio.twiml.messaging_response import MessagingResponse
 from .queue_logic import (
     get_public_queue,
     get_admin_queue_data,
     join_queue_logic,
     next_in_queue_logic,
     remove_from_queue_logic,
-    cancel_by_sms_logic,
 )
 
 def create_blueprint():
@@ -29,11 +27,11 @@ def create_blueprint():
     def join_queue():
         data = request.get_json()
         name = data.get('name')
-        phone_number = data.get('phone_number')
+        email = data.get('email')
         party_size = data.get('party_size', 1)
         line_number_req = data.get('line_number')
 
-        result, status_code = join_queue_logic(name, phone_number, party_size, line_number_req)
+        result, status_code = join_queue_logic(name, email, party_size, line_number_req)
         return jsonify(result), status_code
 
 
@@ -76,19 +74,5 @@ def create_blueprint():
         user_id = data.get('user_id')
         result = remove_from_queue_logic(user_id)
         return jsonify(result)
-
-    @bp.route('/sms', methods=['POST'])
-    def sms_reply():
-        body = request.values.get('Body', '').lower().strip()
-        phone_number = request.values.get('From', '')
-
-        if body == 'cancel':
-            result = cancel_by_sms_logic(phone_number)
-            if result:
-                response = MessagingResponse()
-                response.message('You have been removed from the queue.')
-                return str(response)
-
-        return '', 204
         
     return bp

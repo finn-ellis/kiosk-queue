@@ -1,17 +1,35 @@
 import React from 'react';
+import GenericView from '../components/GenericView';
 
 interface ConfirmationViewProps {
     placeInQueue: number;
     waitTime?: number; // legacy raw queue.wait_time (unused if better data)
     initialEstimatedWait?: number; // snapshot from Join step to prevent shifting/doubling
     partySize?: number;
+    name: string;
     lineNumber?: number;
     perLineSingle?: number[];
     perSpan?: Record<number, number>;
     onNewSignup?: () => void; // reset to new signup flow
+    onBack?: () => void;
+    currentStep?: number;
+    totalSteps?: number;
 }
 
-const ConfirmationView: React.FC<ConfirmationViewProps> = ({ placeInQueue, waitTime, initialEstimatedWait, partySize = 1, lineNumber, perLineSingle, perSpan, onNewSignup }) => {
+const ConfirmationView: React.FC<ConfirmationViewProps> = ({ 
+    placeInQueue, 
+    waitTime, 
+    initialEstimatedWait, 
+    partySize = 1, 
+    name,
+    lineNumber,
+    perLineSingle, 
+    perSpan, 
+    onNewSignup,
+    onBack,
+    currentStep = 7,
+    totalSteps = 7
+}) => {
     // Priority: preserved initial estimate (authoritative for this user), else recompute like join view did, else fallback waitTime
     let detailedWait: number | undefined = initialEstimatedWait;
     if (detailedWait === undefined) {
@@ -26,30 +44,45 @@ const ConfirmationView: React.FC<ConfirmationViewProps> = ({ placeInQueue, waitT
         }
     }
     if (detailedWait === undefined) detailedWait = waitTime ?? 0;
-    const arrivalTime = new Date(Date.now() + detailedWait * 60000).toLocaleTimeString();
+    const arrivalTime = new Date(Date.now() + detailedWait * 60000).toLocaleTimeString([], { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+    });
 
     return (
-        <div className="conf-wrapper">
+        <GenericView 
+            title="CONFIRMED!" 
+            onBack={onBack} 
+            currentStep={currentStep} 
+            totalSteps={totalSteps}
+            backButtonDisabled={false}
+        >
             <div className="conf-panel">
                 <h2 className="conf-title">You're in the Queue!</h2>
                 <div className="conf-grid">
-                    <div className="conf-item">
+                    <div className="conf-item conf-large">
                         <span className="conf-label">Place</span>
                         <span className="conf-value conf-accent">{placeInQueue}</span>
+                    </div>
+                    
+                    {/* {lineNumber !== undefined && (
+                        <div className="conf-item">
+                            <span className="conf-label">Line</span>
+                            <span className="conf-value">{lineNumber + 1}</span>
+                        </div>
+                    )} */}
+                    <div className="conf-item conf-large">
+                        <span className="conf-label">Name</span>
+                        <span className="conf-value">{name}</span>
                     </div>
                     <div className="conf-item">
                         <span className="conf-label">Party Size</span>
                         <span className="conf-value">{partySize}</span>
                     </div>
-                    {lineNumber !== undefined && (
-                        <div className="conf-item">
-                            <span className="conf-label">Line</span>
-                            <span className="conf-value">{lineNumber + 1}</span>
-                        </div>
-                    )}
                     <div className="conf-item wide">
                         <span className="conf-label">Estimated Wait</span>
-                        <span className="conf-value">{detailedWait} min{detailedWait === 1 ? '' : 's'}</span>
+                        <span className="conf-value">{detailedWait}m</span> {/* min{detailedWait === 1 ? '' : 's'} */}
                     </div>
                     <div className="conf-item wide">
                         <span className="conf-label">Approx. Time</span>
@@ -65,24 +98,170 @@ const ConfirmationView: React.FC<ConfirmationViewProps> = ({ placeInQueue, waitT
                     )}
                 </div>
             </div>
+
             <style>{`
-                .conf-wrapper { max-width:520px; margin:1.75rem auto; padding:0 1rem; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif; }
-                .conf-panel { background:#fff; border:1px solid #e2e6ea; border-radius:14px; padding:1.4rem 1.5rem 1.65rem; box-shadow:0 4px 14px -2px rgba(0,0,0,.07), 0 10px 28px -6px rgba(0,0,0,.05); }
-                .conf-title { margin:0 0 1.1rem; font-size:1.55rem; font-weight:600; letter-spacing:.5px; color:#1d2b36; text-align:center; }
-                .conf-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.9rem .9rem; margin-bottom:.75rem; }
-                .conf-item { background:linear-gradient(#f9fbfc,#f1f5f8); border:1px solid #d5dde2; padding:.65rem .7rem .7rem; border-radius:10px; position:relative; box-shadow:0 2px 6px -2px rgba(0,0,0,.06); }
-                .conf-item.wide { grid-column:span 2; }
-                @media (max-width:460px){ .conf-item.wide { grid-column:span 1; } }
-                .conf-label { display:block; font-size:.63rem; text-transform:uppercase; letter-spacing:.09em; font-weight:600; color:#4f5e68; margin-bottom:.25rem; }
-                .conf-value { font-size:1.05rem; font-weight:600; color:#1f2f38; letter-spacing:.5px; }
-                .conf-accent { color:#1976d2; }
-                .conf-note { font-size:.65rem; color:#5c6b74; margin-top:.35rem; text-align:center; line-height:1.3; }
-                .conf-actions { margin-top:1.1rem; display:flex; justify-content:center; }
-                .conf-new { background:#0d5cab; color:#fff; border:1px solid #0d5cab; font-weight:600; letter-spacing:.5px; padding:.75rem 1.25rem; border-radius:10px; cursor:pointer; box-shadow:0 4px 12px -2px rgba(13,92,171,.4); transition: background .22s, transform .18s, box-shadow .25s; }
-                .conf-new:hover { background:#0b5299; }
-                .conf-new:active { transform:translateY(1px); box-shadow:0 3px 9px -2px rgba(13,92,171,.55); }
+                @import url('https://fonts.googleapis.com/css2?family=Jura:wght@400;700&display=swap');
+
+                .conf-panel {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 2px solid rgba(18, 236, 248, 0.3);
+                    border-radius: 1.5rem;
+                    padding: 2.5rem 2rem;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 0 2rem rgba(18, 236, 248, 0.2),
+                               0 0 4rem rgba(18, 236, 248, 0.1);
+                    max-width: 60rem;
+                    width: 100%;
+                }
+
+                .conf-title {
+                    margin: 0 0 2.5rem;
+                    font-family: 'Jura', sans-serif;
+                    font-size: clamp(2rem, 3vw, 3rem);
+                    font-weight: 700;
+                    letter-spacing: 0.2rem;
+                    color: #FFF;
+                    text-align: center;
+                    text-shadow: 0 0 1rem rgba(255, 255, 255, 0.8);
+                }
+
+                .conf-grid {
+                    display: grid;
+                    grid-template-columns: repeat(10, 1fr);
+                    gap: 1rem;
+                    margin-bottom: 2rem;
+                }
+
+                .conf-item {
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(18, 236, 248, 0.2);
+                    padding: 1.5rem 1.25rem;
+                    border-radius: 1rem;
+                    position: relative;
+                    backdrop-filter: blur(5px);
+                    transition: all 0.3s ease;
+                    grid-column: span 2;
+                }
+
+                .conf-item.conf-large {
+                    grid-column: span 4;
+                }
+
+                .conf-item:hover {
+                    border-color: rgba(18, 236, 248, 0.4);
+                    box-shadow: 0 0 1rem rgba(18, 236, 248, 0.2);
+                }
+
+                .conf-item.wide {
+                    grid-column: span 5;
+                }
+
+                @media (max-width: 768px) {
+                    .conf-item.wide {
+                        grid-column: span 5;
+                    }
+                    
+                    .conf-panel {
+                        padding: 2rem 1.5rem;
+                    }
+                    
+                    .conf-grid {
+                        grid-template-columns: 1fr;
+                        gap: 1rem;
+                    }
+                }
+
+                .conf-label {
+                    display: block;
+                    font-family: 'Jura', sans-serif;
+                    font-size: 0.9rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.15em;
+                    font-weight: 600;
+                    color: rgba(255, 255, 255, 0.7);
+                    margin-bottom: 0.5rem;
+                }
+
+                .conf-value {
+                    font-family: 'Jura', sans-serif;
+                    font-size: 1.8rem;
+                    font-weight: 700;
+                    color: #FFF;
+                    letter-spacing: 0.1rem;
+                    text-shadow: 0 0 0.5rem rgba(255, 255, 255, 0.5);
+                }
+
+                .conf-accent {
+                    color: #12ECF8;
+                    text-shadow: 0 0 1rem #12ECF8;
+                }
+
+                .conf-note {
+                    font-family: 'Jura', sans-serif;
+                    font-size: 0.9rem;
+                    color: rgba(255, 255, 255, 0.6);
+                    text-align: center;
+                    line-height: 1.4;
+                    margin-top: 1rem;
+                    font-style: italic;
+                }
+
+                .conf-actions {
+                    margin-top: 2.5rem;
+                    display: flex;
+                    justify-content: center;
+                }
+
+                .conf-new {
+                    background: linear-gradient(135deg, #12ECF8, #0BA8B8);
+                    color: #000;
+                    border: none;
+                    font-family: 'Jura', sans-serif;
+                    font-weight: 700;
+                    font-size: 1.1rem;
+                    letter-spacing: 0.1rem;
+                    padding: 1rem 2.5rem;
+                    border-radius: 1rem;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 0 1rem rgba(18, 236, 248, 0.4),
+                               0 4px 15px rgba(0, 0, 0, 0.2);
+                    text-transform: uppercase;
+                }
+
+                .conf-new:hover {
+                    background: linear-gradient(135deg, #0BA8B8, #12ECF8);
+                    box-shadow: 0 0 2rem rgba(18, 236, 248, 0.6),
+                               0 6px 20px rgba(0, 0, 0, 0.3);
+                    transform: translateY(-2px);
+                }
+
+                .conf-new:active {
+                    transform: translateY(0);
+                    box-shadow: 0 0 1rem rgba(18, 236, 248, 0.4),
+                               0 2px 10px rgba(0, 0, 0, 0.2);
+                }
+
+                @media (max-width: 480px) {
+                    .conf-panel {
+                        padding: 1.5rem 1rem;
+                    }
+                    
+                    .conf-title {
+                        margin-bottom: 2rem;
+                    }
+                    
+                    .conf-value {
+                        font-size: 1.5rem;
+                    }
+                    
+                    .conf-new {
+                        padding: 0.8rem 2rem;
+                        font-size: 1rem;
+                    }
+                }
             `}</style>
-        </div>
+        </GenericView>
     );
 };
 

@@ -143,7 +143,7 @@ const AdminView: React.FC = () => {
                         <td key={`u-${user.id}`} colSpan={span} className="party">
                             <div className="party-cell">
                                 <strong>{user.name}</strong> (#{user.place_in_queue}) PS:{user.party_size} Ln:{(user.line_number ?? 0) + 1} <br />
-                                <small>{user.phone_number}</small>
+                                <small>{user.email}</small>
                                 <div className="actions">
                                     <button onClick={() => handleRemove(user.id)}>Remove</button>
                                 </div>

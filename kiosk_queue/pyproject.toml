@@ -9,7 +9,6 @@ dependencies = [
   "flask-socketio>=5.0",
   "Flask-Cors>=4.0",
   "python-dotenv",
-  "twilio"
 ]
 readme = "README.md"
 license = {text = "MIT"}

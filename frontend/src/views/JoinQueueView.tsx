@@ -5,14 +5,21 @@ import { useQueue } from '../context/QueueContext';
 interface JoinQueueViewProps {
     onJoinSuccess: (data: { place_in_queue: number, wait_time: number, line_number: number, party_size: number, initial_estimated_wait?: number }) => void;
     lineNumber?: number;
+    preselectedPartySize?: number;
+    onBack?: () => void;
 }
 
-const JoinQueueView: React.FC<JoinQueueViewProps> = ({ onJoinSuccess, lineNumber }) => {
+const JoinQueueView: React.FC<JoinQueueViewProps> = ({ onJoinSuccess, lineNumber, preselectedPartySize = 1, onBack }) => {
     const [name, setName] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [partySize, setPartySize] = useState(1);
+    const [email, setEmail] = useState('');
+    const [partySize, setPartySize] = useState(preselectedPartySize);
     const [error, setError] = useState('');
     const { waitDetail, queue } = useQueue();
+
+    // Update party size when preselected value changes
+    useEffect(() => {
+        setPartySize(preselectedPartySize);
+    }, [preselectedPartySize]);
 
     // Base estimated wait in minutes (recomputed when queue/waitDetail changes)
     const baseEstimatedWait = useMemo(() => {
@@ -97,7 +104,7 @@ const JoinQueueView: React.FC<JoinQueueViewProps> = ({ onJoinSuccess, lineNumber
             return;
         }
         try {
-            const data = await joinQueue(name, phoneNumber, partySize, lineNumber);
+            const data = await joinQueue(name, email, partySize, lineNumber);
             onJoinSuccess({ ...data, party_size: partySize, line_number: data.line_number, initial_estimated_wait: baseEstimatedWait });
         } catch (err) {
             setError('Failed to join queue. Please try again.');
@@ -107,7 +114,17 @@ const JoinQueueView: React.FC<JoinQueueViewProps> = ({ onJoinSuccess, lineNumber
 
     return (
         <div className="jq-container">
+            {onBack && (
+                <button type="button" className="jq-back-btn" onClick={onBack}>
+                    ← Back to Player Count
+                </button>
+            )}
             <h2 className="jq-title">Join the Queue</h2>
+            {preselectedPartySize && (
+                <div className="jq-party-display">
+                    Selected Players: <strong>{preselectedPartySize}</strong>
+                </div>
+            )}
             {error && <p className="jq-error" role="alert">{error}</p>}
             <form onSubmit={handleSubmit} className="jq-form">
                 <div className="jq-field">
@@ -115,40 +132,45 @@ const JoinQueueView: React.FC<JoinQueueViewProps> = ({ onJoinSuccess, lineNumber
                     <input className="jq-input" type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your name" />
                 </div>
                 <div className="jq-field">
-                    <label className="jq-label">Phone Number <span className="jq-optional">(optional)</span></label>
-                    <input className="jq-input" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="###-###-####" />
+                    <label className="jq-label">Email <span className="jq-optional">(optional)</span></label>
+                    <input className="jq-input" type="tel" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="###-###-####" />
                 </div>
-                <div className="jq-field">
-                    <label className="jq-label">Party Size</label>
-                    <div className="jq-party-buttons" role="radiogroup" aria-label="Party Size">
-                        {[1, 2].map(size => {
-                            const selected = partySize === size;
-                            return (
-                                <button
-                                    key={size}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={selected}
-                                    onClick={() => setPartySize(size)}
-                                    className={`jq-party-btn ${selected ? 'selected' : ''}`}
-                                >
-                                    {size}
-                                </button>
-                            );
-                        })}
+                {!preselectedPartySize && (
+                    <div className="jq-field">
+                        <label className="jq-label">Party Size</label>
+                        <div className="jq-party-buttons" role="radiogroup" aria-label="Party Size">
+                            {[1, 2].map(size => {
+                                const selected = partySize === size;
+                                return (
+                                    <button
+                                        key={size}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={selected}
+                                        onClick={() => setPartySize(size)}
+                                        className={`jq-party-btn ${selected ? 'selected' : ''}`}
+                                    >
+                                        {size}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                    <div className="jq-estimate">
-                        {displayWait !== undefined ? (
-                            <span>Estimated Wait: <strong>{displayWait}</strong> min{displayWait === 1 ? '' : 's'} {partySize === 1 && lineNumber === undefined && waitDetail?.per_line_single?.length ? '(best line)' : ''}</span>
-                        ) : (
-                            <span className="jq-fade">Estimating wait time...</span>
-                        )}
-                    </div>
+                )}
+                <div className="jq-estimate">
+                    {displayWait !== undefined ? (
+                        <span>Estimated Wait: <strong>{displayWait}</strong> min{displayWait === 1 ? '' : 's'} {partySize === 1 && lineNumber === undefined && waitDetail?.per_line_single?.length ? '(best line)' : ''}</span>
+                    ) : (
+                        <span className="jq-fade">Estimating wait time...</span>
+                    )}
                 </div>
                 <button type="submit" className="jq-submit">Reserve</button>
             </form>
             <style>{`
-                .jq-container { max-width:420px; margin:1.5rem auto; padding:1.5rem 1.75rem; background:#fff; border:1px solid #e2e6ea; border-radius:12px; box-shadow:0 4px 12px -2px rgba(0,0,0,0.08); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif; }
+                .jq-container { max-width:420px; margin:1.5rem auto; padding:1.5rem 1.75rem; background:#fff; border:1px solid #e2e6ea; border-radius:12px; box-shadow:0 4px 12px -2px rgba(0,0,0,0.08); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif; position:relative; }
+                .jq-back-btn { position:absolute; top:1rem; left:1rem; background:none; border:1px solid #c9d2d9; padding:0.5rem 0.75rem; border-radius:6px; cursor:pointer; font-size:0.85rem; color:#43525c; transition:all 0.2s; }
+                .jq-back-btn:hover { border-color:#1976d2; color:#1976d2; }
+                .jq-party-display { text-align:center; margin-bottom:1rem; padding:0.75rem; background:#f8f9fa; border-radius:8px; font-size:0.9rem; color:#43525c; }
                 .jq-title { margin:0 0 0.75rem; font-size:1.5rem; font-weight:600; letter-spacing:.5px; color:#1d2b36; text-align:center; }
                 .jq-error { background:#ffe5e5; border:1px solid #ffb3b3; padding:.5rem .75rem; border-radius:6px; font-size:.85rem; color:#b00020; }
                 .jq-form { display:flex; flex-direction:column; gap:1rem; }

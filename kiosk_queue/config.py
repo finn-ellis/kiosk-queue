@@ -8,7 +8,4 @@ class Config:
     SLOT_TIME = int(os.environ.get('SLOT_TIME', 5)) # in minutes
     RESET_TIME = int(os.environ.get('RESET_TIME', 3)) # in minutes
     ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or 'admin'
-    TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
-    TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
-    TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
     KIOSK_QUEUE_CORS_ORIGINS = os.environ.get('KIOSK_QUEUE_CORS_ORIGINS') or '*'

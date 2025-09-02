@@ -4,7 +4,7 @@ from .db import db
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    phone_number = db.Column(db.String(20), nullable=True)
+    email = db.Column(db.String(255), nullable=True)
     party_size = db.Column(db.Integer, nullable=False, default=1)
     place_in_queue = db.Column(db.Integer, nullable=False)
     line_number = db.Column(db.Integer, nullable=True)

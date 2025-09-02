@@ -4,7 +4,7 @@ const QUEUE_API_URL = API_URL + "/api/kiosk"
 export interface User {
     id: number;
     name: string;
-    phone_number: string;
+    email: string;
     party_size: number;
     place_in_queue: number;
     line_number?: number;
@@ -29,13 +29,13 @@ export const getQueue = async (): Promise<QueueState> => {
     return response.json();
 };
 
-export const joinQueue = async (name: string, phoneNumber: string, partySize: number, lineNumber?: number): Promise<any> => {
+export const joinQueue = async (name: string, email: string, partySize: number, lineNumber?: number): Promise<any> => {
     const response = await fetch(`${QUEUE_API_URL}/join`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, phone_number: phoneNumber, party_size: partySize, line_number: lineNumber }),
+        body: JSON.stringify({ name, email: email, party_size: partySize, line_number: lineNumber }),
     });
     if (!response.ok) {
         throw new Error('Failed to join queue');

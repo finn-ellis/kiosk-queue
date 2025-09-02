@@ -31,7 +31,6 @@ Admins can access using a simple password, no username. Inconspicuous button to 
 [ group c1 ] [ group c2 ]
 ```
 - Optimizes the queue when sign-ups are cancelled
-- Texts users when they sign up and when they are next up (Twilio API)
 - Allow cancellation if user responds to text with `CANCEL`
 
 ## Requirements
