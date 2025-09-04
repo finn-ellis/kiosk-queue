@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import JoinQueueView from '../views/JoinQueueView';
 import PlayerCountView from '../views/PlayerCountView';
 import NameInputView from '../views/NameInputView';
 import EmailInputView from '../views/EmailInputView';
@@ -7,6 +6,7 @@ import EmailOptInView from '../views/EmailOptInView';
 import ConfirmationView from '../views/ConfirmationView';
 import { useParams } from 'react-router-dom';
 import { useQueue } from '../context/QueueContext';
+import { joinQueue } from '../api/api';
 
 type UserData = {
     place_in_queue: number;
@@ -82,9 +82,10 @@ const Kiosk: React.FC = () => {
         // Submit to queue with collected data
         try {
             // Use the API with collected form data
-            const { joinQueue } = await import('../api/api');
-            const data = await joinQueue(partyName, '', selectedPlayerCount, lineNumber ? parseInt(lineNumber, 10) : undefined);
-            handleJoinSuccess({ ...data, party_name: partyName, party_size: selectedPlayerCount, line_number: data.line_number });
+            // const { joinQueue } = await import('../api/api');
+            // we use optIn here because emailOptIn state might not be updated yet
+            const data = await joinQueue(partyName, email || '', optIn, selectedPlayerCount, lineNumber ? parseInt(lineNumber, 10) : undefined);
+            handleJoinSuccess({ ...data, email: email, party_name: partyName, party_size: selectedPlayerCount, line_number: data.line_number });
         } catch (err) {
             console.error('Failed to join queue:', err);
             // Could add error handling here

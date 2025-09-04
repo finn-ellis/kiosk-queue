@@ -234,7 +234,7 @@ def _compact_queue(start_depth: int):
             break
     db.session.flush()
 
-def join_queue_logic(name, email, party_size, line_number_req):
+def join_queue_logic(name, email, party_size, line_number_req, email_consent):
     if not name:
         return {'error': 'Name is required'}, 400
 
@@ -249,7 +249,8 @@ def join_queue_logic(name, email, party_size, line_number_req):
         db.session.commit()
 
     # SQLAlchemy model accepts kwargs; type: ignore for static checker
-    new_user = User(name=name, email=email, party_size=party_size, line_number=line_number, place_in_queue=depth)  # type: ignore[arg-type]
+    print(email, email_consent)
+    new_user = User(name=name, email=email, party_size=party_size, line_number=line_number, place_in_queue=depth, email_consent=email_consent)  # type: ignore[arg-type]
     db.session.add(new_user)
     # queue.update_wait_time()
     db.session.commit()
@@ -288,7 +289,9 @@ def next_in_queue_logic(line_number):
         #     queue.update_wait_time()
         db.session.commit()
         broadcast_queue_update()
-
+        file_server = current_app.extensions.get('file_server')
+        if file_server:
+            file_server.log_recent_email(target.email, target.email_consent)
     return {'message': f'Line {line_number} advanced'}
 
 def remove_from_queue_logic(user_id):
@@ -311,4 +314,7 @@ def remove_from_queue_logic(user_id):
         #     queue.update_wait_time()
         db.session.commit()
         broadcast_queue_update()
+        # file_server = current_app.extensions.get('file_server')
+        # if file_server:
+        #     file_server.log_recent_email(user.email, user.email_consent)
     return {'message': 'User removed'}

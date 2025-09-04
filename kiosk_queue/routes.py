@@ -30,8 +30,8 @@ def create_blueprint():
         email = data.get('email')
         party_size = data.get('party_size', 1)
         line_number_req = data.get('line_number')
-
-        result, status_code = join_queue_logic(name, email, party_size, line_number_req)
+        email_consent = data.get('email_consent', False)
+        result, status_code = join_queue_logic(name, email, party_size, line_number_req, email_consent)
         return jsonify(result), status_code
 
 

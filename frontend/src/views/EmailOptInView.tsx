@@ -17,6 +17,7 @@ const EmailOptInView: React.FC<EmailOptInViewProps> = ({
     const [selectedOption, setSelectedOption] = useState<boolean | null>(null);
 
     const handleOptionSelect = (optIn: boolean) => {
+        console.log(optIn);
         setSelectedOption(optIn);
         // Immediately proceed to next step when option is selected
         onNext(optIn);

@@ -8,6 +8,7 @@ class User(db.Model):
     party_size = db.Column(db.Integer, nullable=False, default=1)
     place_in_queue = db.Column(db.Integer, nullable=False)
     line_number = db.Column(db.Integer, nullable=True)
+    email_consent = db.Column(db.Boolean, nullable=False, default=False)
 
 class Queue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
