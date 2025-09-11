@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PlayerCountView from '../views/PlayerCountView';
 import NameInputView from '../views/NameInputView';
 import EmailInputView from '../views/EmailInputView';
@@ -28,6 +28,58 @@ const Kiosk: React.FC = () => {
     const [userData, setUserData] = useState<UserData | null>(null);
     // const [localWaitTime, setLocalWaitTime] = useState(0);
     const [localQueue, setLocalQueue] = useState(queue);
+    
+    // Inactivity timer
+    const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
+    const INACTIVITY_TIMEOUT = 15000; // 15 seconds
+
+    // Reset function to return to initial state
+    const resetToInitialState = useCallback(() => {
+        setView('playerCount');
+        setSelectedPlayerCount(1);
+        setPartyName('');
+        setEmail(null);
+        setEmailOptIn(false);
+        setUserData(null);
+    }, []);
+
+    // Function to reset the inactivity timer
+    const resetInactivityTimer = useCallback(() => {
+        if (inactivityTimer.current) {
+            clearTimeout(inactivityTimer.current);
+        }
+        inactivityTimer.current = setTimeout(() => {
+            resetToInitialState();
+        }, INACTIVITY_TIMEOUT);
+    }, [resetToInitialState]);
+
+    // Function to handle user activity
+    const handleUserActivity = useCallback(() => {
+        resetInactivityTimer();
+    }, [resetInactivityTimer]);
+
+    // Set up event listeners for user activity
+    useEffect(() => {
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        
+        events.forEach(event => {
+            document.addEventListener(event, handleUserActivity, true);
+        });
+
+        // Start the timer initially
+        resetInactivityTimer();
+
+        return () => {
+            // Clean up event listeners
+            events.forEach(event => {
+                document.removeEventListener(event, handleUserActivity, true);
+            });
+            // Clear timer
+            if (inactivityTimer.current) {
+                clearTimeout(inactivityTimer.current);
+            }
+        };
+    }, [handleUserActivity, resetInactivityTimer]);
 
     useEffect(() => {
         const lineNum = lineNumber ? parseInt(lineNumber, 10) : undefined;
@@ -149,6 +201,8 @@ const Kiosk: React.FC = () => {
                             setEmail('');
                             setEmailOptIn(false);
                             setView('playerCount');
+                            // Reset the inactivity timer when user starts a new signup
+                            resetInactivityTimer();
                         }}
                     />
                 );
